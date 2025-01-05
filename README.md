@@ -41,7 +41,7 @@ Para ejecutar este juego, necesitas tener Python y la librería **Pygame** insta
 
 ## Autor✒️
 
-* **Andrés Felipe García Sosa** - *Trabajo Inicial* - [Rex10202](https://github.com/rex10202)
+* **Andrés Felipe García Sosa** - *Desarrollo y documentación* - [Rex10202](https://github.com/rex10202)
 
 ## Licencia 📄
 
