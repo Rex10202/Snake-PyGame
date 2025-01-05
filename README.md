@@ -49,9 +49,6 @@ Este proyecto está bajo la Licencia MIT.
 
 ## Expresiones de Gratitud 🎁
 Muchas gracias por usar y mejorar cada día el proyecto <3
-* etc.
-
-
 
 ---
-⌨️ con ❤️ por [Villanuevand](https://github.com/Villanuevand) 😊
+[Rex10202](https://github.com/rex10202)
