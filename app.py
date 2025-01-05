@@ -27,8 +27,8 @@ estilo_fuente = pygame.font.SysFont("bahnschrift", 25)
 fuente_puntuacion = pygame.font.SysFont("comicsansms", 35)
 
 # Cargar sonidos
-sonido_comida = pygame.mixer.Sound('score.mp3')
-sonido_fondo = pygame.mixer.Sound('snake.wav')
+sonido_comida = pygame.mixer.Sound('Sonidos\score.mp3')
+sonido_fondo = pygame.mixer.Sound('Sonidos\snake.wav')
 sonido_fondo.play(-1)  # Reproducir en bucle
 
 # Función para mostrar la puntuación en pantalla
