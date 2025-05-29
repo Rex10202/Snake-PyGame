@@ -200,7 +200,7 @@ class PaimonSnake:
             self.musica_menu = os.path.join(ruta_sonidos, "Menu.wav")
             self.musica_selva = os.path.join(ruta_sonidos, "Ambiente1.wav")
             self.musica_volcan = os.path.join(ruta_sonidos, "Ambiente2.wav")
-            self.musica_desierto = os.path.join(ruta_sonidos, "Sumerumierda.wav")
+            self.musica_desierto = os.path.join(ruta_sonidos, "Ambiente3.wav")
             
         except Exception as e:
             print(f"Error al cargar sonidos: {e}")
