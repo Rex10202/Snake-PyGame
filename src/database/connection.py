@@ -55,7 +55,10 @@ def crear_tabla_jugadores():
                 password VARCHAR(255) NOT NULL,
                 puntuacion INT DEFAULT 0,
                 nivel INT DEFAULT 1,
-                rol VARCHAR(20) DEFAULT 'user' CHECK (rol IN ('user', 'admin'))
+                rol VARCHAR(20) DEFAULT 'user' CHECK (rol IN ('user', 'admin')),
+                nivel_mundo_1 INT DEFAULT 0,
+                nivel_mundo_2 INT DEFAULT 0,
+                nivel_mundo_3 INT DEFAULT 0
             );
         """)
         conexion.commit()
@@ -83,7 +86,8 @@ def crear_tabla_partidas():
                 jugador_id INT,
                 puntuacion INT,
                 nivel INT,
-                fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                mundo VARCHAR(20),
+                fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (jugador_id) REFERENCES jugadores(id)
             );
         """)
@@ -210,22 +214,39 @@ def eliminar_jugador(jugador_id):
 
 def obtener_ranking_global():
     """
-    Obtiene el ranking global de jugadores con su mayor puntuación,
+    Obtiene el ranking global de jugadores con su mayor puntuación, el nivel y el mundo donde la obtuvo,
     excluyendo a los administradores.
     """
     try:
         conexion = connect_db()
         cursor = conexion.cursor()
 
-        # Consulta para obtener el ID, usuario, mayor puntuación, nivel y rol de cada jugador
         cursor.execute("""
             SELECT j.id, j.username, 
-                   COALESCE(MAX(p.puntuacion), 0) AS mayor_puntuacion, 
-                   j.nivel, j.rol
+                   COALESCE(p.puntuacion, 0) AS mayor_puntuacion, 
+                   COALESCE(p.nivel, 0) AS nivel_mayor_puntuacion,
+                   COALESCE(p.mundo, '') AS mundo_mayor_puntuacion,
+                   j.rol
             FROM jugadores j
-            LEFT JOIN partidas p ON j.id = p.jugador_id
-            WHERE j.rol != 'admin'  -- Excluir administradores
-            GROUP BY j.id, j.username, j.nivel, j.rol
+            LEFT JOIN (
+                SELECT p1.jugador_id, p1.puntuacion, p1.nivel, p1.mundo
+                FROM partidas p1
+                INNER JOIN (
+                    SELECT jugador_id, MAX(puntuacion) AS max_puntuacion
+                    FROM partidas
+                    GROUP BY jugador_id
+                ) p2
+                ON p1.jugador_id = p2.jugador_id AND p1.puntuacion = p2.max_puntuacion
+                -- Si hay varias partidas con la misma puntuación máxima, toma la más reciente
+                INNER JOIN (
+                    SELECT jugador_id, puntuacion, MAX(fecha) AS fecha
+                    FROM partidas
+                    GROUP BY jugador_id, puntuacion
+                ) p3
+                ON p1.jugador_id = p3.jugador_id AND p1.puntuacion = p3.puntuacion AND p1.fecha = p3.fecha
+            ) p
+            ON j.id = p.jugador_id
+            WHERE j.rol != 'admin'
             ORDER BY mayor_puntuacion DESC
         """)
         ranking = cursor.fetchall()
@@ -246,7 +267,7 @@ def obtener_historial_personal(usuario_id):
         conexion = connect_db()
         cursor = conexion.cursor()
         cursor.execute("""
-            SELECT id, puntuacion, nivel, fecha 
+            SELECT id, puntuacion, nivel,mundo, fecha 
             FROM partidas 
             WHERE jugador_id = %s 
             ORDER BY fecha DESC
@@ -260,7 +281,7 @@ def obtener_historial_personal(usuario_id):
         return []
 
 
-def registrar_partida(jugador_id, puntuacion, nivel):
+def registrar_partida(jugador_id, puntuacion, nivel, mundo):
     """
     Registra una partida jugada en la base de datos.
 
@@ -273,8 +294,8 @@ def registrar_partida(jugador_id, puntuacion, nivel):
         conexion = connect_db()
         cursor = conexion.cursor()
         cursor.execute(
-            "INSERT INTO partidas (jugador_id, puntuacion, nivel) VALUES (%s, %s, %s)",
-            (jugador_id, puntuacion, nivel)
+            "INSERT INTO partidas (jugador_id, puntuacion, nivel, mundo) VALUES (%s, %s, %s, %s)",
+            (jugador_id, puntuacion, nivel, mundo)
         )
         conexion.commit()
         cursor.close()
@@ -358,5 +379,43 @@ def recalcular_puntuacion_maxima(jugador_id):
         conexion.close()
     except mysql.connector.Error as err:
         print("Error al recalcular la puntuación máxima:", err)
+
+
+def actualizar_nivel_maximo(jugador_id, nivel_mundo, nivel_alcanzado):
+    """
+    Actualiza el nivel máximo alcanzado por el jugador en el mundo indicado.
+    """
+    columna = f"nivel_mundo_{nivel_mundo}"
+    try:
+        conexion = connect_db()
+        cursor = conexion.cursor()
+        cursor.execute(
+            f"UPDATE jugadores SET {columna} = %s WHERE id = %s AND {columna} < %s",
+            (nivel_alcanzado, jugador_id, nivel_alcanzado)
+        )
+        conexion.commit()
+        cursor.close()
+        conexion.close()
+    except Exception as e:
+        print(f"Error al actualizar nivel máximo: {e}")
+
+def obtener_niveles_maximos(jugador_id):
+    """
+    Obtiene los niveles máximos alcanzados por el jugador en cada mundo.
+    """
+    try:
+        conexion = connect_db()
+        cursor = conexion.cursor()
+        cursor.execute(
+            "SELECT nivel_mundo_1, nivel_mundo_2, nivel_mundo_3 FROM jugadores WHERE id = %s",
+            (jugador_id,)
+        )
+        resultado = cursor.fetchone()
+        cursor.close()
+        conexion.close()
+        return resultado if resultado else (1, 0, 0)
+    except Exception as e:
+        print(f"Error al obtener niveles máximos: {e}")
+        return (1, 0, 0)
 
 

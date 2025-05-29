@@ -18,7 +18,7 @@ Para ejecutar este juego, necesitas tener Python y la librería **Pygame** insta
 1. Clona este repositorio o descarga el archivo en tu máquina.
 
    ```bash
-   git clone https://github.com/tu-usuario/culebrita-clasica.git
+   git clone https://github.com/rex10202/culebrita-clasica.git
    cd culebrita-clasica
 
 2. Asegúrate de tener Python instalado. Si no lo tienes, puedes descargarlo desde python.org.
