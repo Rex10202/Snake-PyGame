@@ -1453,7 +1453,7 @@ class PaimonSnake:
                     # Registrar la partida solo una vez
                     if not partida_registrada:
                         try:
-                            registrar_partida(self.usuario_actual['id'], puntuacion, nivel)
+                            registrar_partida(self.usuario_actual['id'], puntuacion, nivel, mundo=nivel_mundo)
                             self.actualizar_progreso_usuario(nivel_mundo, nivel)
                             print("Puntuación actualizada correctamente.")
                         except Exception as e:

@@ -184,13 +184,14 @@ class AplicacionGUI:
         ranking = obtener_ranking_global()
         self.ventana_ranking = tk.Toplevel(self.master)
         self.ventana_ranking.title("Ranking Mundial")
-        centrar_ventana(self.ventana_ranking, 800, 400)
+        centrar_ventana(self.ventana_ranking, 1000, 400)
         self.ventana_ranking.resizable(False, False)
-        tree = ttk.Treeview(self.ventana_ranking, columns=("ID", "Usuario", "Puntuación", "Nivel"), show="headings")
+        tree = ttk.Treeview(self.ventana_ranking, columns=("ID", "Usuario", "Puntuación","Nivel","Mundo"), show="headings")
         tree.heading("ID", text="ID")
         tree.heading("Usuario", text="Usuario")
         tree.heading("Puntuación", text="Puntuación")
         tree.heading("Nivel", text="Nivel")
+        tree.heading("Mundo", text="Mundo")
         tree.pack(expand=True, fill="both")
         for fila in ranking:
             tree.insert("", "end", values=fila)
@@ -206,18 +207,19 @@ class AplicacionGUI:
         # Lógica para mostrar el historial (solo para usuarios)
         historial = obtener_historial_personal(self.usuario_actual["id"])
         # Ordenar el historial en forma descendente según la fecha
-        historial.sort(key=lambda x: x[3], reverse=True)
+        historial.sort(key=lambda x: (x[3] is None, x[3] or ''), reverse=True)
         puntuacion_maxima = max([fila[1] for fila in historial], default=0)
         self.ventana_historial = tk.Toplevel(self.master)
         self.ventana_historial.title("Mi Historial de Partidas")
-        centrar_ventana(self.ventana_historial, 800, 400)
+        centrar_ventana(self.ventana_historial, 1000, 400)
         self.ventana_historial.resizable(False, False)
         tk.Label(self.ventana_historial, text=f"Puntuación Máxima: {puntuacion_maxima}", 
                  font=("Helvetica", 14), bg="#1e1e1e", fg="white").pack(pady=10)
-        tree = ttk.Treeview(self.ventana_historial, columns=("ID", "Puntuación", "Nivel", "Fecha"), show="headings")
+        tree = ttk.Treeview(self.ventana_historial, columns=("ID", "Puntuación", "Nivel", "Mundo", "Fecha"), show="headings")
         tree.heading("ID", text="ID")
         tree.heading("Puntuación", text="Puntuación")
         tree.heading("Nivel", text="Nivel")
+        tree.heading("Mundo", text="Mundo")
         tree.heading("Fecha", text="Fecha")
         tree.pack(expand=True, fill="both")
         for fila in historial:
@@ -445,7 +447,8 @@ def obtener_historial_personal(usuario_id):
     rol = cursor.fetchone()[0]
     if rol == "admin":
         return []  # Los administradores no tienen historial
-    cursor.execute("SELECT id, puntuacion, nivel, fecha FROM partidas WHERE jugador_id = %s", (usuario_id,))
+    # Ordena por fecha descendente para mostrar la partida más reciente primero
+    cursor.execute("SELECT id, puntuacion, nivel, mundo, fecha FROM partidas WHERE jugador_id = %s ORDER BY fecha DESC", (usuario_id,))
     historial = cursor.fetchall()
     cursor.close()
     conexion.close()
