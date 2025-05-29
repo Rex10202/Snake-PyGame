@@ -1,0 +1,30 @@
+Versión actualizada
+# Please enter the commit message for your changes. Lines starting
+# with '#' will be ignored, and an empty message aborts the commit.
+#
+# On branch main
+# Your branch is behind 'origin/main' by 3 commits, and can be fast-forwarded.
+#   (use "git pull" to update your local branch)
+#
+# Changes to be committed:
+#	deleted:    app.py
+#	new file:   requeriments.txt
+#	new file:   src/admin.py
+#	new file:   src/app.py
+#	renamed:    Sonidos/score.mp3 -> src/assets/sonidos/score.mp3
+#	renamed:    Sonidos/snake.wav -> src/assets/sonidos/snake.wav
+#	new file:   src/database/__pycache__/connection.cpython-313.pyc
+#	new file:   src/database/__pycache__/models.cpython-313.pyc
+#	new file:   src/database/_init.py
+#	new file:   src/database/connection.py
+#	new file:   src/database/models.py
+#	new file:   src/game/__init__.py
+#	new file:   src/game/__pycache__/__init__.cpython-313.pyc
+#	new file:   src/game/__pycache__/components.cpython-313.pyc
+#	new file:   src/game/__pycache__/main_menu.cpython-313.pyc
+#	new file:   src/game/main_menu.py
+#	new file:   src/ui/__pycache__/components.cpython-313.pyc
+#	new file:   src/ui/components.py
+#	new file:   src/utils/__pycache__/helpers.cpython-313.pyc
+#	new file:   src/utils/helpers.py
+#
