@@ -25,7 +25,8 @@ def connect_db():
             host=db_host,
             user=db_user,
             password=db_password,
-            database=db_name
+            database=db_name,
+            auth_plugin='mysql_native_password'  # Asegura compatibilidad con versiones recientes de MySQL
         )
         return conexion
     except mysql.connector.Error as err:
