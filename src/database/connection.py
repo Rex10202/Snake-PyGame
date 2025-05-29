@@ -55,7 +55,10 @@ def crear_tabla_jugadores():
                 password VARCHAR(255) NOT NULL,
                 puntuacion INT DEFAULT 0,
                 nivel INT DEFAULT 1,
-                rol VARCHAR(20) DEFAULT 'user' CHECK (rol IN ('user', 'admin'))
+                rol VARCHAR(20) DEFAULT 'user' CHECK (rol IN ('user', 'admin')),
+                nivel_mundo_1 INT DEFAULT 0,
+                nivel_mundo_2 INT DEFAULT 0,
+                nivel_mundo_3 INT DEFAULT 0
             );
         """)
         conexion.commit()
@@ -358,5 +361,43 @@ def recalcular_puntuacion_maxima(jugador_id):
         conexion.close()
     except mysql.connector.Error as err:
         print("Error al recalcular la puntuación máxima:", err)
+
+
+def actualizar_nivel_maximo(jugador_id, nivel_mundo, nivel_alcanzado):
+    """
+    Actualiza el nivel máximo alcanzado por el jugador en el mundo indicado.
+    """
+    columna = f"nivel_mundo_{nivel_mundo}"
+    try:
+        conexion = connect_db()
+        cursor = conexion.cursor()
+        cursor.execute(
+            f"UPDATE jugadores SET {columna} = %s WHERE id = %s AND {columna} < %s",
+            (nivel_alcanzado, jugador_id, nivel_alcanzado)
+        )
+        conexion.commit()
+        cursor.close()
+        conexion.close()
+    except Exception as e:
+        print(f"Error al actualizar nivel máximo: {e}")
+
+def obtener_niveles_maximos(jugador_id):
+    """
+    Obtiene los niveles máximos alcanzados por el jugador en cada mundo.
+    """
+    try:
+        conexion = connect_db()
+        cursor = conexion.cursor()
+        cursor.execute(
+            "SELECT nivel_mundo_1, nivel_mundo_2, nivel_mundo_3 FROM jugadores WHERE id = %s",
+            (jugador_id,)
+        )
+        resultado = cursor.fetchone()
+        cursor.close()
+        conexion.close()
+        return resultado if resultado else (1, 0, 0)
+    except Exception as e:
+        print(f"Error al obtener niveles máximos: {e}")
+        return (1, 0, 0)
 
 

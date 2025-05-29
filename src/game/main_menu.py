@@ -4,7 +4,7 @@ import os
 import time
 import math
 import json
-from database.connection import registrar_partida
+from database.connection import registrar_partida, actualizar_nivel_maximo, obtener_niveles_maximos
 
 
 class PaimonSnake:
@@ -1269,9 +1269,10 @@ class PaimonSnake:
         clave_progreso = f"nivel_mundo_{nivel_mundo}"
         if clave_progreso not in self.usuario_actual:
             self.usuario_actual[clave_progreso] = 1
-        
         if nivel_alcanzado > self.usuario_actual[clave_progreso]:
             self.usuario_actual[clave_progreso] = nivel_alcanzado
+            # Actualizar también en la base de datos
+            actualizar_nivel_maximo(self.usuario_actual["id"], nivel_mundo, nivel_alcanzado)
     
     def iniciar_juego_nivel(self, nivel_mundo):
         """Inicia el juego en el nivel/mundo especificado."""
@@ -1595,7 +1596,11 @@ class PaimonSnake:
             return True
     
     def ejecutar(self, usuario_actual=None):
-        """Bucle principal del juego."""
+        if usuario_actual is not None:
+            niveles = obtener_niveles_maximos(usuario_actual["id"])
+            usuario_actual["nivel_mundo_1"] = niveles[0]
+            usuario_actual["nivel_mundo_2"] = niveles[1]
+            usuario_actual["nivel_mundo_3"] = niveles[2]
         self.usuario_actual = usuario_actual or {
             "username": "Jugador", 
             "nivel": 1, 
