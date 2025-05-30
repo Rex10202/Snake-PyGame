@@ -6,6 +6,364 @@ import math
 import json
 from database.connection import registrar_partida, actualizar_nivel_maximo, obtener_niveles_maximos
 
+class SnakeSpriteRenderer:
+    def __init__(self, tamanio_bloque):
+        self.TAMANIO_BLOQUE = tamanio_bloque
+        self.sprites_cargados = False
+        self.sprites = {}
+        self.sprites_originales = {}  # Guardar sprites sin escalar para rotación
+        self.sprites_consumibles = {}  # Sprites de consumibles
+        
+    def cargar_sprites(self):
+        
+        """Carga todos los sprites de la serpiente y consumibles."""
+        try:
+            # Ajustar ruta para tu estructura src/game/main_menu.py -> src/assets/sprites
+            ruta_sprites = os.path.join("src", "assets", "sprites")
+            
+            # === CARGAR SPRITES DE SERPIENTE ===
+            ruta_serpiente = os.path.join(ruta_sprites, "Serpiente")
+            
+            # Cargar sprite de cabeza
+            ruta_cabeza = os.path.join(ruta_serpiente, "Cabeza", "Snake head1.png")
+            self.sprites_originales['cabeza'] = pygame.image.load(ruta_cabeza)
+            
+            # Cargar sprites de cuerpo
+            ruta_cuerpo = os.path.join(ruta_serpiente, "Cuerpo")
+            self.sprites_originales['cuerpo'] = pygame.image.load(os.path.join(ruta_cuerpo, "Body.png"))
+            self.sprites_originales['cola'] = pygame.image.load(os.path.join(ruta_cuerpo, "Tail.png"))
+            
+            # Cargar SOLO el sprite direccional base (BodyDR.png)
+            ruta_direcciones = os.path.join(ruta_cuerpo, "Direcciones")
+            self.sprites_originales['curva_base'] = pygame.image.load(os.path.join(ruta_direcciones, "BodyDR.png"))
+            
+            # === CARGAR SPRITES DE CONSUMIBLES ===
+            consumibles_config = {
+                # Comida
+                'manzana': {'carpeta': 'Manzana_verde', 'archivo': 'Manzana1.png'},
+                'carne': {'carpeta': 'Carne', 'archivo': 'Carne1.png'},
+                
+                # Power-ups
+                'escudo': {'carpeta': 'Escudo', 'archivo': 'Escudo1.png'},
+                'acelerador': {'carpeta': 'Acelerador', 'archivo': 'Acelerador1.png'},
+                'ralentizador': {'carpeta': 'Reloj', 'archivo': 'Reloj1.png'},
+                'reductor': {'carpeta': 'Reductor', 'archivo': 'Reductor1.png'}
+            }
+            
+            for tipo, config in consumibles_config.items():
+                try:
+                    ruta_consumible = os.path.join(ruta_sprites, config['carpeta'], config['archivo'])
+                    self.sprites_consumibles[tipo] = pygame.image.load(ruta_consumible)
+                    print(f"✅ Sprite cargado: {tipo} desde {config['carpeta']}")
+                except Exception as e:
+                    print(f"❌ Error cargando sprite {tipo}: {e}")
+                    self.sprites_consumibles[tipo] = None
+            
+            # Escalar todos los sprites
+            self.escalar_sprites()
+            self.sprites_cargados = True
+            print("🐍 Sprites de serpiente y consumibles cargados correctamente")
+            
+        except Exception as e:
+            print(f"Error al cargar sprites: {e}")
+            print("Usando renderizado por defecto (rectángulos)")
+            self.sprites_cargados = False
+
+        try:
+            # Cargar fondos de niveles
+            self.fondos = {}
+            for i in range(1, 4):  # Fondos 1, 2 y 3
+                try:
+                    ruta_fondo = os.path.join(ruta_sprites, "Backgrounds", f"Background{i}.png")
+                    self.fondos[i] = pygame.image.load(ruta_fondo)
+                    print(f"✅ Fondo {i} cargado correctamente")
+                except Exception as e:
+                    print(f"❌ Error cargando fondo {i}: {e}")
+                    self.fondos[i] = None
+            
+            # Cargar imagen de Game Over
+            try:
+                ruta_gameover = os.path.join(ruta_sprites, "Temoriste", "Temoriste.png")
+                self.game_over_img = pygame.image.load(ruta_gameover)
+                print("✅ Imagen de Game Over cargada correctamente")
+            except Exception as e:
+                print(f"❌ Error cargando imagen de Game Over: {e}")
+                self.game_over_img = None
+        except Exception as e:
+            print(f"Error al cargar fondos o Game Over: {e}")
+
+
+
+    def escalar_sprites(self):
+        """Escala todos los sprites al tamaño del bloque."""
+        size = (self.TAMANIO_BLOQUE, self.TAMANIO_BLOQUE)
+        
+        # Escalar sprites de serpiente
+        self.sprites['cabeza'] = pygame.transform.scale(self.sprites_originales['cabeza'], size)
+        self.sprites['cuerpo'] = pygame.transform.scale(self.sprites_originales['cuerpo'], size)
+        self.sprites['cola'] = pygame.transform.scale(self.sprites_originales['cola'], size)
+        self.sprites['curva_base'] = pygame.transform.scale(self.sprites_originales['curva_base'], size)
+        
+        # Escalar sprites de consumibles
+        for tipo, sprite in self.sprites_consumibles.items():
+            if sprite is not None:
+                self.sprites_consumibles[tipo] = pygame.transform.scale(sprite, size)
+    
+    def obtener_direccion(self, desde, hacia):
+        """Obtiene la dirección entre dos posiciones."""
+        dx = hacia[0] - desde[0]
+        dy = hacia[1] - desde[1]
+        
+        if dx > 0: return 'R'  # Derecha
+        if dx < 0: return 'L'  # Izquierda
+        if dy > 0: return 'D'  # Abajo
+        if dy < 0: return 'U'  # Arriba
+        return 'L'  # Por defecto izquierda
+    
+    def rotar_sprite(self, sprite, direccion):
+        """Rota un sprite según la dirección. Las imágenes originales apuntan a la izquierda."""
+        if direccion == 'L':  # Izquierda - sin rotación
+            return sprite
+        elif direccion == 'R':  # Derecha - rotar 180°
+            return pygame.transform.rotate(sprite, 180)
+        elif direccion == 'U':  # Arriba - rotar -90°
+            return pygame.transform.rotate(sprite, -90)
+        elif direccion == 'D':  # Abajo - rotar 90°
+            return pygame.transform.rotate(sprite, 90)
+        else:
+            return sprite
+    
+    def obtener_sprite_curva(self, dir_entrada, dir_salida):
+        """Obtiene el sprite de curva rotado y/o reflejado según las direcciones."""
+        clave_direccion = dir_entrada + dir_salida
+        sprite_base = self.sprites['curva_base']
+        
+        # SISTEMA CORREGIDO: Transformaciones para cada tipo de curva
+        # BodyDR.png representa: desde abajo (D) hacia derecha (R)
+        
+        transformaciones = {
+            # Curvas normales (sin reflejo)
+            'UR': {'rotacion': 0, 'reflejo_h': False, 'reflejo_v': False},      # desde abajo, gira derecha = 0°
+            'LU': {'rotacion': 90, 'reflejo_h': False, 'reflejo_v': False},     # desde derecha, gira arriba = 90°
+            'DL': {'rotacion': 180, 'reflejo_h': False, 'reflejo_v': False},    # desde arriba, gira izquierda = 180°
+            'RD': {'rotacion': 270, 'reflejo_h': False, 'reflejo_v': False},    # desde izquierda, gira abajo = 270°
+            
+            # Curvas reflejadas
+            'UL': {'rotacion': 0, 'reflejo_h': True, 'reflejo_v': False},       # desde abajo, gira izquierda
+            'LD': {'rotacion': 90, 'reflejo_h': True, 'reflejo_v': False},      # desde izquierda, gira arriba
+            'DR': {'rotacion': 180, 'reflejo_h': True, 'reflejo_v': False},     # desde arriba, gira derecha
+            'RU': {'rotacion': 270, 'reflejo_h': True, 'reflejo_v': False},     # desde derecha, gira abajo
+        }
+        
+        if clave_direccion in transformaciones:
+            config = transformaciones[clave_direccion]
+            sprite_resultado = sprite_base.copy()
+            
+            # Aplicar reflejos si es necesario
+            if config['reflejo_h'] or config['reflejo_v']:
+                sprite_resultado = pygame.transform.flip(
+                    sprite_resultado, 
+                    config['reflejo_h'],  # Flip horizontal
+                    config['reflejo_v']   # Flip vertical
+                )
+            
+            # Aplicar rotación si es necesaria
+            if config['rotacion'] != 0:
+                sprite_resultado = pygame.transform.rotate(sprite_resultado, config['rotacion'])
+            
+            return sprite_resultado
+        else:
+            # Si no es una curva reconocida, devolver sprite de cuerpo normal
+            return self.sprites['cuerpo']
+    
+    def obtener_sprite_cuerpo(self, serpiente, indice):
+        """Obtiene el sprite apropiado para un segmento del cuerpo."""
+        if indice <= 0 or indice >= len(serpiente) - 1:
+            # Para segmentos rectos, calcular dirección y rotar
+            if len(serpiente) > 1:
+                if indice == 0:
+                    # Primer segmento - dirección hacia el siguiente
+                    direccion = self.obtener_direccion(serpiente[0], serpiente[1])
+                elif indice == len(serpiente) - 1:
+                    # Último segmento - dirección desde el anterior
+                    direccion = self.obtener_direccion(serpiente[indice-1], serpiente[indice])
+                else:
+                    direccion = 'L'  # Por defecto
+                
+                return self.rotar_sprite(self.sprites['cuerpo'], direccion)
+            else:
+                return self.sprites['cuerpo']
+        
+        seg_anterior = serpiente[indice - 1]
+        seg_actual = serpiente[indice]
+        seg_siguiente = serpiente[indice + 1]
+        
+        # Calcular direcciones
+        dir_entrada = self.obtener_direccion(seg_anterior, seg_actual)
+        dir_salida = self.obtener_direccion(seg_actual, seg_siguiente)
+        
+        # Si es línea recta, usar sprite normal rotado
+        if dir_entrada == dir_salida:
+            return self.rotar_sprite(self.sprites['cuerpo'], dir_entrada)
+        
+        # Si es curva, usar sprite de curva transformado
+        return self.obtener_sprite_curva(dir_entrada, dir_salida)
+    
+    def dibujar_fondo(self, pantalla, nivel_mundo, ancho, alto):
+        """Dibuja el fondo del nivel usando la imagen correspondiente."""
+        if nivel_mundo in self.fondos and self.fondos[nivel_mundo] is not None:
+            # Escalar la imagen al tamaño de la pantalla
+            fondo_escalado = pygame.transform.scale(self.fondos[nivel_mundo], (ancho, alto))
+            pantalla.blit(fondo_escalado, (0, 0))
+            return True
+        return False
+
+    def dibujar_game_over(self, pantalla, ancho, alto):
+        """Dibuja la imagen de Game Over."""
+        if hasattr(self, 'game_over_img') and self.game_over_img is not None:
+            # Escalar la imagen al tamaño de la pantalla
+            game_over_escalado = pygame.transform.scale(self.game_over_img, (ancho, alto))
+            pantalla.blit(game_over_escalado, (0, 0))
+            return True
+        return False
+
+    def dibujar_serpiente_con_sprites(self, pantalla, serpiente, efectos_activos, offset_x=0, offset_y=0):
+        """Dibuja la serpiente usando sprites con rotación correcta."""
+        if not self.sprites_cargados or len(serpiente) == 0:
+            return False  # Fallback al método original
+        
+        for i, bloque in enumerate(serpiente):
+            x, y = bloque[0] + offset_x, bloque[1] + offset_y
+            sprite = None
+            
+            # Lógica corregida: cabeza/cola
+            if i == len(serpiente) - 1:  # CABEZA (último elemento - donde se mueve)
+                # Calcular dirección de la cabeza
+                if len(serpiente) > 1:
+                    direccion_cabeza = self.obtener_direccion(serpiente[i-1], serpiente[i])
+                else:
+                    direccion_cabeza = 'L'  # Por defecto
+                sprite = self.rotar_sprite(self.sprites['cabeza'], direccion_cabeza)
+                
+            elif i == 0:  # COLA (primer elemento - el más antiguo)
+                # Calcular dirección de la cola (hacia dónde apunta)
+                if len(serpiente) > 1:
+                    direccion_cola = self.obtener_direccion(serpiente[i], serpiente[i+1])
+                else:
+                    direccion_cola = 'L'  # Por defecto
+                sprite = self.rotar_sprite(self.sprites['cola'], direccion_cola)
+                
+            else:  # CUERPO (elementos del medio)
+                sprite = self.obtener_sprite_cuerpo(serpiente, i)
+            
+            # Aplicar efectos de color si están activos
+            if efectos_activos.get("escudo", {}).get("activo", False):
+                # Crear superficie con tinte dorado para escudo
+                sprite_con_efecto = sprite.copy()
+                overlay = pygame.Surface(sprite.get_size())
+                overlay.fill((255, 215, 0))  # Dorado
+                overlay.set_alpha(100)
+                sprite_con_efecto.blit(overlay, (0, 0))
+                pantalla.blit(sprite_con_efecto, (x, y))
+            elif efectos_activos.get("acelerador", {}).get("activo", False):
+                # Tinte naranja para acelerador
+                sprite_con_efecto = sprite.copy()
+                overlay = pygame.Surface(sprite.get_size())
+                overlay.fill((255, 165, 0))  # Naranja
+                overlay.set_alpha(100)
+                sprite_con_efecto.blit(overlay, (0, 0))
+                pantalla.blit(sprite_con_efecto, (x, y))
+            elif efectos_activos.get("ralentizador", {}).get("activo", False):
+                # Tinte morado para ralentizador
+                sprite_con_efecto = sprite.copy()
+                overlay = pygame.Surface(sprite.get_size())
+                overlay.fill((128, 0, 128))  # Morado
+                overlay.set_alpha(100)
+                sprite_con_efecto.blit(overlay, (0, 0))
+                pantalla.blit(sprite_con_efecto, (x, y))
+            else:
+                # Sin efectos
+                pantalla.blit(sprite, (x, y))
+        
+        return True  # Éxito
+    
+    def dibujar_consumible_con_sprite(self, pantalla, x, y, tipo, categoria, tiempo_restante=None, offset_x=0, offset_y=0):
+        """Dibuja un consumible usando su sprite correspondiente."""
+        if not self.sprites_cargados:
+            return False  # Fallback al método original
+        
+        sprite = self.sprites_consumibles.get(tipo)
+        if sprite is None:
+            return False  # No hay sprite disponible, usar fallback
+        
+        # Aplicar efecto de parpadeo para power-ups que están por desaparecer
+        if categoria == "powerup" and tiempo_restante is not None and tiempo_restante <= 3:
+            frecuencia_parpadeo = max(0.2, tiempo_restante / 10)
+            if int(pygame.time.get_ticks() / (frecuencia_parpadeo * 1000)) % 2 == 0:
+                # Crear efecto de transparencia
+                sprite_con_efecto = sprite.copy()
+                sprite_con_efecto.set_alpha(128)  # 50% transparencia
+                pantalla.blit(sprite_con_efecto, (x + offset_x, y + offset_y))
+            else:
+                pantalla.blit(sprite, (x + offset_x, y + offset_y))
+        else:
+            # Dibujar sprite normal
+            pantalla.blit(sprite, (x + offset_x, y + offset_y))
+        
+        return True  # Éxito
+
+# 2. Reemplazar la función dibujar_comida existente:
+def dibujar_comida(self, x, y, tipo, offset_x=0, offset_y=0):
+    """Dibuja comida en la pantalla usando sprites o fallback."""
+    # Intentar dibujar con sprite
+    if self.sprite_renderer.dibujar_consumible_con_sprite(
+        self.pantalla, x, y, tipo, "comida", None, offset_x, offset_y
+    ):
+        return  # Éxito con sprite
+    
+    # Fallback: dibujar con rectángulos (código original)
+    color = self.COMIDA[tipo]["color"]
+    pygame.draw.rect(self.pantalla, color, [x + offset_x, y + offset_y, self.TAMANIO_BLOQUE, self.TAMANIO_BLOQUE])
+    
+    if tipo == "manzana":
+        pygame.draw.rect(self.pantalla, self.MARRON, [x + 8 + offset_x, y - 5 + offset_y, 4, 5])
+    elif tipo == "carne":
+        pygame.draw.line(self.pantalla, self.ROJO, [x + 5 + offset_x, y + 5 + offset_y], [x + 15 + offset_x, y + 15 + offset_y], 2)
+        pygame.draw.line(self.pantalla, self.ROJO, [x + 15 + offset_x, y + 5 + offset_y], [x + 5 + offset_x, y + 15 + offset_y], 2)
+
+# 3. Reemplazar la función dibujar_powerup existente:
+def dibujar_powerup(self, x, y, tipo, tiempo_restante, offset_x=0, offset_y=0):
+    """Dibuja power-up en la pantalla usando sprites o fallback."""
+    # Intentar dibujar con sprite
+    if self.sprite_renderer.dibujar_consumible_con_sprite(
+        self.pantalla, x, y, tipo, "powerup", tiempo_restante, offset_x, offset_y
+    ):
+        return  # Éxito con sprite
+    
+    # Fallback: dibujar con rectángulos (código original)
+    color = self.POWER_UPS[tipo]["color"]
+    
+    if tiempo_restante <= 3:
+        frecuencia_parpadeo = max(0.2, tiempo_restante / 10)
+        if int(time.time() / frecuencia_parpadeo) % 2 == 0:
+            color = tuple(max(0, c - 50) for c in color)
+    
+    pygame.draw.rect(self.pantalla, self.BLANCO, [x-2 + offset_x, y-2 + offset_y, self.TAMANIO_BLOQUE+4, self.TAMANIO_BLOQUE+4])
+    pygame.draw.rect(self.pantalla, color, [x + offset_x, y + offset_y, self.TAMANIO_BLOQUE, self.TAMANIO_BLOQUE])
+    
+    if tipo == "escudo":
+        pygame.draw.circle(self.pantalla, self.AMARILLO, [x + 10 + offset_x, y + 10 + offset_y], 7, 2)
+    elif tipo == "acelerador":
+        pygame.draw.line(self.pantalla, self.AMARILLO, [x + 5 + offset_x, y + 10 + offset_y], [x + 15 + offset_x, y + 10 + offset_y], 2)
+        pygame.draw.line(self.pantalla, self.AMARILLO, [x + 15 + offset_x, y + 10 + offset_y], [x + 10 + offset_x, y + 5 + offset_y], 2)
+        pygame.draw.line(self.pantalla, self.AMARILLO, [x + 15 + offset_x, y + 10 + offset_y], [x + 10 + offset_x, y + 15 + offset_y], 2)
+    elif tipo == "ralentizador":
+        pygame.draw.line(self.pantalla, self.AMARILLO, [x + 15 + offset_x, y + 10 + offset_y], [x + 5 + offset_x, y + 10 + offset_y], 2)
+        pygame.draw.line(self.pantalla, self.AMARILLO, [x + 5 + offset_x, y + 10 + offset_y], [x + 10 + offset_x, y + 5 + offset_y], 2)
+        pygame.draw.line(self.pantalla, self.AMARILLO, [x + 5 + offset_x, y + 10 + offset_y], [x + 10 + offset_x, y + 15 + offset_y], 2)
+    elif tipo == "reductor":
+        pygame.draw.line(self.pantalla, self.AMARILLO, [x + 5 + offset_x, y + 10 + offset_y], [x + 15 + offset_x, y + 10 + offset_y], 3)
+
 
 class PaimonSnake:
     def __init__(self):
@@ -86,6 +444,10 @@ class PaimonSnake:
         self.VELOCIDAD_MAXIMA = 20
         self.DURACION_POWERUP_MAPA = 10.0
         self.TIEMPO_ESPERA_POWERUP = 5.0
+        
+        # Inicializar sistema de sprites
+        self.sprite_renderer = SnakeSpriteRenderer(self.TAMANIO_BLOQUE)
+        self.sprite_renderer.cargar_sprites()
         
         # Configuración de niveles especiales - LAVA MEJORADA
         self.TIEMPO_LAVA_BASE = 8.0  # Tiempo inicial entre gotas de lava
@@ -477,6 +839,11 @@ class PaimonSnake:
     
     def dibujar_fondo_nivel(self, nivel_mundo, offset_x=0, offset_y=0):
         """Dibuja el fondo específico para cada nivel."""
+        # Intentar dibujar con imagen de fondo
+        if self.sprite_renderer.dibujar_fondo(self.pantalla, nivel_mundo, self.ANCHO, self.ALTO):
+            return  # Éxito con imagen de fondo
+        
+        # Fallback: dibujar con colores sólidos (código original)
         if nivel_mundo == 1:  # Selva
             self.pantalla.fill(self.VERDE_SELVA)
             # Añadir algunos elementos decorativos de selva
@@ -484,7 +851,7 @@ class PaimonSnake:
                 for j in range(0, self.ALTO, 40):
                     if random.randint(1, 10) == 1:  # 10% de probabilidad
                         pygame.draw.circle(self.pantalla, self.VERDE_OSCURO, 
-                                         (i + offset_x, j + offset_y), 3)
+                                        (i + offset_x, j + offset_y), 3)
         
         elif nivel_mundo == 2:  # Volcán
             self.pantalla.fill(self.GRIS_OSCURO)
@@ -493,7 +860,7 @@ class PaimonSnake:
                 for j in range(0, self.ALTO, 30):
                     if random.randint(1, 15) == 1:  # Rocas volcánicas
                         pygame.draw.circle(self.pantalla, self.MARRON, 
-                                         (i + offset_x, j + offset_y), 2)
+                                        (i + offset_x, j + offset_y), 2)
         
         elif nivel_mundo == 3:  # Desierto
             self.pantalla.fill(self.AMARILLO_DESIERTO)
@@ -502,8 +869,8 @@ class PaimonSnake:
                 for j in range(0, self.ALTO, 25):
                     if random.randint(1, 20) == 1:  # Dunas de arena
                         pygame.draw.circle(self.pantalla, self.MARRON_DESIERTO, 
-                                         (i + offset_x, j + offset_y), 1)
-    
+                                        (i + offset_x, j + offset_y), 1)
+        
     def inicializar_particulas_arena(self):
         """Inicializa las partículas de arena para el efecto de tormenta."""
         self.particulas_arena = []
@@ -956,7 +1323,14 @@ class PaimonSnake:
                 area_lava["y"] <= y < area_lava["y"] + self.TAMANIO_LAVA * self.TAMANIO_BLOQUE)
 
     def dibujar_comida(self, x, y, tipo, offset_x=0, offset_y=0):
-        """Dibuja comida en la pantalla."""
+        """Dibuja comida en la pantalla usando sprites o fallback."""
+        # Intentar dibujar con sprite
+        if self.sprite_renderer.dibujar_consumible_con_sprite(
+            self.pantalla, x, y, tipo, "comida", None, offset_x, offset_y
+        ):
+            return  # Éxito con sprite
+        
+        # Fallback: dibujar con rectángulos (código original)
         color = self.COMIDA[tipo]["color"]
         pygame.draw.rect(self.pantalla, color, [x + offset_x, y + offset_y, self.TAMANIO_BLOQUE, self.TAMANIO_BLOQUE])
         
@@ -967,7 +1341,14 @@ class PaimonSnake:
             pygame.draw.line(self.pantalla, self.ROJO, [x + 15 + offset_x, y + 5 + offset_y], [x + 5 + offset_x, y + 15 + offset_y], 2)
 
     def dibujar_powerup(self, x, y, tipo, tiempo_restante, offset_x=0, offset_y=0):
-        """Dibuja power-up en la pantalla con efectos visuales según el tiempo restante."""
+        """Dibuja power-up en la pantalla usando sprites o fallback."""
+        # Intentar dibujar con sprite
+        if self.sprite_renderer.dibujar_consumible_con_sprite(
+            self.pantalla, x, y, tipo, "powerup", tiempo_restante, offset_x, offset_y
+        ):
+            return  # Éxito con sprite
+        
+        # Fallback: dibujar con rectángulos (código original)
         color = self.POWER_UPS[tipo]["color"]
         
         if tiempo_restante <= 3:
@@ -1274,6 +1655,36 @@ class PaimonSnake:
             # Actualizar también en la base de datos
             actualizar_nivel_maximo(self.usuario_actual["id"], nivel_mundo, nivel_alcanzado)
     
+    def dibujar_serpiente(self, serpiente, efectos_activos, offset_x=0, offset_y=0):
+        """Dibuja la serpiente con sprites o fallback a rectángulos."""
+        # Intentar dibujar con sprites
+        if self.sprite_renderer.dibujar_serpiente_con_sprites(
+            self.pantalla, serpiente, efectos_activos, offset_x, offset_y
+        ):
+            return  # Éxito con sprites
+        
+        # Fallback: dibujar con rectángulos (código original)
+        for bloque in serpiente:
+            if efectos_activos["escudo"]["activo"]:
+                pygame.draw.rect(self.pantalla, self.DORADO, 
+                               [bloque[0] + offset_x, bloque[1] + offset_y, 
+                                self.TAMANIO_BLOQUE, self.TAMANIO_BLOQUE])
+                pygame.draw.rect(self.pantalla, self.AZUL, 
+                               [bloque[0]+2 + offset_x, bloque[1]+2 + offset_y, 
+                                self.TAMANIO_BLOQUE-4, self.TAMANIO_BLOQUE-4])
+            elif efectos_activos["acelerador"]["activo"]:
+                pygame.draw.rect(self.pantalla, self.NARANJA, 
+                               [bloque[0] + offset_x, bloque[1] + offset_y, 
+                                self.TAMANIO_BLOQUE, self.TAMANIO_BLOQUE])
+            elif efectos_activos["ralentizador"]["activo"]:
+                pygame.draw.rect(self.pantalla, self.MORADO, 
+                               [bloque[0] + offset_x, bloque[1] + offset_y, 
+                                self.TAMANIO_BLOQUE, self.TAMANIO_BLOQUE])
+            else:
+                pygame.draw.rect(self.pantalla, self.AZUL, 
+                               [bloque[0] + offset_x, bloque[1] + offset_y, 
+                                self.TAMANIO_BLOQUE, self.TAMANIO_BLOQUE])
+    
     def iniciar_juego_nivel(self, nivel_mundo):
         """Inicia el juego en el nivel/mundo especificado."""
         try:
@@ -1386,17 +1797,8 @@ class PaimonSnake:
                         self.dibujar_powerup(estado_powerup["x"], estado_powerup["y"], 
                                           estado_powerup["tipo"], estado_powerup["tiempo_restante"], offset_x, offset_y)
                     
-                    # Dibujar la serpiente
-                    for bloque in serpiente:
-                        if efectos_activos["escudo"]["activo"]:
-                            pygame.draw.rect(self.pantalla, self.DORADO, [bloque[0] + offset_x, bloque[1] + offset_y, self.TAMANIO_BLOQUE, self.TAMANIO_BLOQUE])
-                            pygame.draw.rect(self.pantalla, self.AZUL, [bloque[0]+2 + offset_x, bloque[1]+2 + offset_y, self.TAMANIO_BLOQUE-4, self.TAMANIO_BLOQUE-4])
-                        elif efectos_activos["acelerador"]["activo"]:
-                            pygame.draw.rect(self.pantalla, self.NARANJA, [bloque[0] + offset_x, bloque[1] + offset_y, self.TAMANIO_BLOQUE, self.TAMANIO_BLOQUE])
-                        elif efectos_activos["ralentizador"]["activo"]:
-                            pygame.draw.rect(self.pantalla, self.MORADO, [bloque[0] + offset_x, bloque[1] + offset_y, self.TAMANIO_BLOQUE, self.TAMANIO_BLOQUE])
-                        else:
-                            pygame.draw.rect(self.pantalla, self.AZUL, [bloque[0] + offset_x, bloque[1] + offset_y, self.TAMANIO_BLOQUE, self.TAMANIO_BLOQUE])
+                    # Dibujar la serpiente con sprites
+                    self.dibujar_serpiente(serpiente, efectos_activos, offset_x, offset_y)
                     
                     # Dibujar UI
                     self.mostrar_puntuacion(puntuacion, nivel, nivel_mundo, offset_x, offset_y)
@@ -1443,11 +1845,20 @@ class PaimonSnake:
                     offset_x, offset_y = self.obtener_offset_vibracion()
 
                     # Dibujar fondo del nivel
-                    self.dibujar_fondo_nivel(nivel_mundo, offset_x, offset_y)
-                    
-                    self.mostrar_mensaje("¡Perdiste! Presiona ESC para volver al menú o ENTER para reintentar", self.ROJO, self.ALTO / 2, offset_x, offset_y)
+                    if not self.sprite_renderer.dibujar_game_over(self.pantalla, self.ANCHO, self.ALTO):
+                        self.dibujar_fondo_nivel(nivel_mundo, offset_x, offset_y)
+
+                    texto_superficie = pygame.Surface((self.ANCHO, 100))
+                    texto_superficie.set_alpha(180)  # Semi-transparente
+                    texto_superficie.fill(self.NEGRO)
+                    self.pantalla.blit(texto_superficie, (0, self.ALTO / 2 - 50 + offset_y))
+
+                    # Y luego muestra los mensajes:
+                    self.mostrar_mensaje('''Presiona ESC para volver al menú o ENTER para reintentar''', 
+                                        self.ROJO, self.ALTO / 2, offset_x-65, offset_y)
                     self.mostrar_puntuacion(puntuacion, nivel, nivel_mundo, offset_x, offset_y)
                     self.mostrar_estadisticas_consumibles(comida_consumida, powerups_consumidos, offset_x, offset_y)
+                    
                     pygame.display.update()
 
                     # Registrar la partida solo una vez
@@ -1526,17 +1937,8 @@ class PaimonSnake:
                         if not efectos_activos["escudo"]["activo"]:
                             juego_perdido = True
 
-                # Dibujar la serpiente
-                for bloque in serpiente:
-                    if efectos_activos["escudo"]["activo"]:
-                        pygame.draw.rect(self.pantalla, self.DORADO, [bloque[0] + offset_x, bloque[1] + offset_y, self.TAMANIO_BLOQUE, self.TAMANIO_BLOQUE])
-                        pygame.draw.rect(self.pantalla, self.AZUL, [bloque[0]+2 + offset_x, bloque[1]+2 + offset_y, self.TAMANIO_BLOQUE-4, self.TAMANIO_BLOQUE-4])
-                    elif efectos_activos["acelerador"]["activo"]:
-                        pygame.draw.rect(self.pantalla, self.NARANJA, [bloque[0] + offset_x, bloque[1] + offset_y, self.TAMANIO_BLOQUE, self.TAMANIO_BLOQUE])
-                    elif efectos_activos["ralentizador"]["activo"]:
-                        pygame.draw.rect(self.pantalla, self.MORADO, [bloque[0] + offset_x, bloque[1] + offset_y, self.TAMANIO_BLOQUE, self.TAMANIO_BLOQUE])
-                    else:
-                        pygame.draw.rect(self.pantalla, self.AZUL, [bloque[0] + offset_x, bloque[1] + offset_y, self.TAMANIO_BLOQUE, self.TAMANIO_BLOQUE])
+                # Dibujar la serpiente con sprites
+                self.dibujar_serpiente(serpiente, efectos_activos, offset_x, offset_y)
 
                 # Aplicar efecto de arena cayendo (solo en nivel desierto durante tormenta)
                 if nivel_mundo == 3 and "tormenta" in eventos_activos and eventos_activos["tormenta"]["activa"]:
