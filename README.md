@@ -1,4 +1,4 @@
-# Snake Pygame
+|# Snake Pygame
 
 Este es un juego clásico de la "Serpiente" (Snake) desarrollado con la librería **Pygame**. En este juego, el jugador controla una serpiente que debe comer la comida que aparece en pantalla para crecer. El objetivo es evitar chocar con las paredes o el cuerpo de la serpiente. 
 
@@ -42,6 +42,7 @@ Para ejecutar este juego, necesitas tener Python y la librería **Pygame** insta
 ## Autor✒️
 
 * **Andrés Felipe García Sosa** - *Desarrollo y documentación* - [Rex10202](https://github.com/rex10202)
+* **Carlos David Rodríguez González** - *Diseño y caracteristicas* -[Cardavidev](https://github.com/Cardavidev)
 
 ## Licencia 📄
 
