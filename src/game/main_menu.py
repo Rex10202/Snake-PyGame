@@ -2,7 +2,6 @@ import pygame
 import random
 import os
 import time
-import math
 import json
 from database.connection import registrar_partida, actualizar_nivel_maximo, obtener_niveles_maximos
 
