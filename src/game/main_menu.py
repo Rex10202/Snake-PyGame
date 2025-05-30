@@ -261,7 +261,7 @@ class SnakeSpriteRenderer:
                 # Crear superficie con tinte dorado para escudo
                 sprite_con_efecto = sprite.copy()
                 overlay = pygame.Surface(sprite.get_size())
-                overlay.fill((255, 215, 0))  # Dorado
+                overlay.fill((50, 153, 213))  # Azul
                 overlay.set_alpha(100)
                 sprite_con_efecto.blit(overlay, (0, 0))
                 pantalla.blit(sprite_con_efecto, (x, y))
@@ -451,13 +451,13 @@ class PaimonSnake:
         
         # Configuración de niveles especiales - LAVA MEJORADA
         self.TIEMPO_LAVA_BASE = 8.0  # Tiempo inicial entre gotas de lava
-        self.TIEMPO_LAVA_MINIMO = 3.0  # Tiempo mínimo entre gotas de lava
-        self.DURACION_LAVA = 5.0  # Duración del área de lava (aumentado a 5 segundos)
-        self.DURACION_ADVERTENCIA_LAVA = 2.0  # Tiempo de advertencia antes de que aparezca la lava
-        self.TAMANIO_LAVA = 3  # Área de lava 3x3
+        self.TIEMPO_LAVA_MINIMO = 2.0  # Tiempo mínimo entre gotas de lava
+        self.DURACION_LAVA = 15.0  # Duración del área de lava (aumentado a 10 segundos)
+        self.DURACION_ADVERTENCIA_LAVA = 1.0  # Tiempo de advertencia antes de que aparezca la lava
+        self.TAMANIO_LAVA = 5  # Área de lava 3x3
         
         self.TIEMPO_TORMENTA = 10.0  # Tiempo entre tormentas de arena
-        self.DURACION_TORMENTA = 5.0  # Duración de la tormenta
+        self.DURACION_TORMENTA = 10.0  # Duración de la tormenta
         
         # Variables para efecto de arena
         self.particulas_arena = []
@@ -485,7 +485,7 @@ class PaimonSnake:
 
         self.POWER_UPS = {
             "escudo": {
-                "color": self.DORADO,
+                "color": self.AZUL,
                 "probabilidad": 30,
                 "puntos": 5,
                 "crecimiento": 1,
@@ -872,16 +872,17 @@ class PaimonSnake:
                                         (i + offset_x, j + offset_y), 1)
         
     def inicializar_particulas_arena(self):
-        """Inicializa las partículas de arena para el efecto de tormenta."""
+        """Inicializa las partículas de arena para el efecto de tormenta con mayor volumen."""
         self.particulas_arena = []
-        for _ in range(150):  # Número de partículas
+        # Aumentar de 150 a 300 partículas para mayor volumen
+        for _ in range(300):  # Número de partículas aumentado
             particula = {
                 'x': random.randint(0, self.ANCHO),
                 'y': random.randint(-50, self.ALTO),
-                'velocidad_y': random.uniform(2, 6),
-                'velocidad_x': random.uniform(-1, 1),
-                'tamanio': random.randint(1, 3),
-                'opacidad': random.randint(100, 200)
+                'velocidad_y': random.uniform(3, 8),  # Velocidad ligeramente aumentada
+                'velocidad_x': random.uniform(-2, 2),  # Mayor variación horizontal
+                'tamanio': random.randint(1, 4),  # Tamaños más variados
+                'opacidad': random.randint(120, 255)  # Mayor opacidad para mejor visibilidad
             }
             self.particulas_arena.append(particula)
     
@@ -900,7 +901,7 @@ class PaimonSnake:
                 particula['x'] = random.randint(0, self.ANCHO)
     
     def dibujar_efecto_arena_cayendo(self, intensidad=1.0, offset_x=0, offset_y=0):
-        """Dibuja el efecto de arena cayendo con opacidad del 70%."""
+        """Dibuja el efecto de arena cayendo con mayor volumen y opacidad del 80%."""
         if not self.particulas_arena:
             self.inicializar_particulas_arena()
         
@@ -908,8 +909,8 @@ class PaimonSnake:
         superficie_arena = pygame.Surface((self.ANCHO, self.ALTO), pygame.SRCALPHA)
         
         for particula in self.particulas_arena:
-            # Calcular opacidad basada en la intensidad (70% máximo)
-            opacidad = int(particula['opacidad'] * intensidad * 0.7)
+            # Calcular opacidad basada en la intensidad (80% máximo, aumentado del 70%)
+            opacidad = int(particula['opacidad'] * intensidad * 0.8)
             color_arena = (*self.ARENA_COLOR, opacidad)
             
             # Dibujar partícula
@@ -921,8 +922,10 @@ class PaimonSnake:
                 pygame.draw.circle(superficie_arena, color_arena, (x, y), 1)
             elif tamanio == 2:
                 pygame.draw.circle(superficie_arena, color_arena, (x, y), 2)
-            else:
+            elif tamanio == 3:
                 pygame.draw.rect(superficie_arena, color_arena, (x, y, 3, 3))
+            else:  # tamanio == 4
+                pygame.draw.rect(superficie_arena, color_arena, (x, y, 4, 4))
         
         # Dibujar la superficie con las partículas sobre la pantalla
         self.pantalla.blit(superficie_arena, (0, 0))
@@ -1087,7 +1090,7 @@ class PaimonSnake:
             if datos["tiempo_restante"] > 0:
                 tiempo = round(datos["tiempo_restante"])
                 if efecto == "escudo":
-                    texto = self.fuente_estado.render(f"🛡️ Escudo: {tiempo}s", True, self.DORADO)
+                    texto = self.fuente_estado.render(f"🛡️ Escudo: {tiempo}s", True, self.AZUL)
                 elif efecto == "acelerador":
                     texto = self.fuente_estado.render(f"⚡ Acelerador: {tiempo}s", True, self.NARANJA)
                 elif efecto == "ralentizador":
@@ -1175,7 +1178,7 @@ class PaimonSnake:
     def calcular_max_charcos_lava(self, nivel_juego):
         """Calcula el número máximo de charcos de lava simultáneos basado en el nivel."""
         # Empezar con 1 charco, añadir 1 cada 3 niveles, máximo 5 charcos
-        return min(5, 1 + (nivel_juego - 1) // 3)
+        return min(5, 1 + (nivel_juego) // 3)
     
     def generar_comida(self, serpiente, comida_existente=None, areas_lava=None):
         """Genera una nueva comida en una posición aleatoria, evitando áreas de lava."""
@@ -1605,17 +1608,74 @@ class PaimonSnake:
                 
         return estado_powerup
 
-    def calcular_velocidad_actual(self, velocidad_base, nivel, efectos_activos):
-        """Calcula la velocidad actual basada en el nivel y los efectos activos."""
+    def calcular_velocidad_actual(self, velocidad_base, nivel, efectos_activos, nivel_mundo=1, direccion_movimiento=None, eventos_activos=None):
+        """Calcula la velocidad actual basada en el nivel, efectos activos y condiciones especiales."""
         velocidad = velocidad_base + (nivel - 1) * 2
         velocidad = min(velocidad, self.VELOCIDAD_MAXIMA)
         
+        # Aplicar efectos de power-ups
         if "acelerador" in efectos_activos and efectos_activos["acelerador"]["activo"]:
             velocidad *= efectos_activos["acelerador"]["multiplicador_velocidad"]
         elif "ralentizador" in efectos_activos and efectos_activos["ralentizador"]["activo"]:
             velocidad *= efectos_activos["ralentizador"]["multiplicador_velocidad"]
-            
+        
+        # Aplicar efecto del viento del desierto
+        if nivel_mundo == 3 and direccion_movimiento and eventos_activos:
+            velocidad = self.calcular_efecto_viento_desierto(velocidad, direccion_movimiento, eventos_activos, efectos_activos)
+        
         return velocidad
+    
+    def calcular_efecto_viento_desierto(self, velocidad_base, direccion_movimiento, eventos_activos, efectos_activos):
+        """Calcula el efecto del viento del desierto en la velocidad de la serpiente."""
+        # Verificar si hay tormenta activa y el escudo no está activo
+        if (eventos_activos.get("tormenta", {}).get("activa", False) and 
+            not efectos_activos.get("escudo", {}).get("activo", False)):
+            
+            # Aplicar efectos del viento según la dirección
+            if direccion_movimiento == 'derecha':
+                return velocidad_base * 0.75  # Viento en contra
+            elif direccion_movimiento == 'izquierda':
+                return velocidad_base * 1.25  # Viento a favor
+            # Arriba y abajo no se modifican
+        
+        return velocidad_base
+
+    def obtener_direccion_movimiento(self, cambio_x, cambio_y):
+        """Obtiene la dirección actual de movimiento de la serpiente."""
+        if cambio_x > 0:
+            return 'derecha'
+        elif cambio_x < 0:
+            return 'izquierda'
+        elif cambio_y > 0:
+            return 'abajo'
+        elif cambio_y < 0:
+            return 'arriba'
+        return None
+
+    def mostrar_info_viento_desierto(self, eventos_activos, efectos_activos, direccion_movimiento, offset_x=0, offset_y=0):
+        """Muestra información sobre el efecto del viento en el desierto."""
+        if not eventos_activos.get("tormenta", {}).get("activa", False):
+            return
+        
+        y_pos = self.ALTO - 200
+        
+        # Mostrar estado del viento
+        if efectos_activos.get("escudo", {}).get("activo", False):
+            texto_viento = "🛡️ Escudo activo - Viento anulado"
+            color = self.AZUL
+        else:
+            if direccion_movimiento == 'derecha':
+                texto_viento = "💨 Viento en contra - Velocidad reducida (75%)"
+                color = self.ROJO
+            elif direccion_movimiento == 'izquierda':
+                texto_viento = "💨 Viento a favor - Velocidad aumentada (125%)"
+                color = self.VERDE
+            else:
+                texto_viento = "💨 Tormenta activa - Sin efecto direccional"
+                color = self.AMARILLO
+        
+        superficie_viento = self.fuente_pequena.render(texto_viento, True, color)
+        self.pantalla.blit(superficie_viento, [10 + offset_x, y_pos + offset_y])
 
     def calcular_puntos(self, tipo, categoria, efectos_activos):
         """Calcula los puntos ganados por un consumible teniendo en cuenta los efectos activos."""
@@ -1828,8 +1888,14 @@ class PaimonSnake:
                 areas_lava = eventos_activos.get("lava", {}).get("areas_activas", []) if nivel_mundo == 2 else None
                 estado_powerup = self.actualizar_estado_powerup(estado_powerup, tiempo_transcurrido, serpiente, (comida_x, comida_y), areas_lava)
                 
-                # Calcular velocidad actual
-                velocidad = self.calcular_velocidad_actual(self.VELOCIDAD_BASE, nivel, efectos_activos)
+                # Obtener dirección actual de movimiento
+                direccion_movimiento = self.obtener_direccion_movimiento(cambio_x, cambio_y)
+
+                # Calcular velocidad con efectos del viento
+                velocidad = self.calcular_velocidad_actual(
+                    self.VELOCIDAD_BASE, nivel, efectos_activos, 
+                    nivel_mundo, direccion_movimiento, eventos_activos
+)
                 
                 while juego_perdido:
                     # Reproducir sonido de muerte y activar vibración solo una vez
@@ -1988,6 +2054,9 @@ class PaimonSnake:
                 self.mostrar_eventos_especiales(nivel_mundo, eventos_activos, offset_x, offset_y)
                 self.mostrar_estado_powerup(estado_powerup, offset_x, offset_y)
                 self.mostrar_estadisticas_consumibles(comida_consumida, powerups_consumidos, offset_x, offset_y)
+                # Mostrar información del viento (solo en desierto)
+                if nivel_mundo == 3:
+                    self.mostrar_info_viento_desierto(eventos_activos, efectos_activos, direccion_movimiento, offset_x, offset_y)
                 pygame.display.update()
                 self.reloj.tick(velocidad)
 
