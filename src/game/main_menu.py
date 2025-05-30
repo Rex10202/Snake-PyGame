@@ -40,7 +40,7 @@ class SnakeSpriteRenderer:
             # === CARGAR SPRITES DE CONSUMIBLES ===
             consumibles_config = {
                 # Comida
-                'manzana': {'carpeta': 'Manzana_verde', 'archivo': 'Manzana1.png'},
+                'manzana': {'carpeta': 'Manzana_roja', 'archivo': 'Manzana1.png'},
                 'carne': {'carpeta': 'Carne', 'archivo': 'Carne1.png'},
                 
                 # Power-ups
